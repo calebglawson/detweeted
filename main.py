@@ -6,6 +6,7 @@ import typer
 
 APP = typer.Typer()
 
+
 def _make_config(config_path):
     '''
     Load the config from a file.
@@ -15,6 +16,7 @@ def _make_config(config_path):
         return json.load(config)
     except:
         return None
+
 
 def _make_api(config):
     '''
@@ -37,20 +39,22 @@ def _make_api(config):
 
     return api
 
+
 def main(config: str):
     _config = _make_config(config)
     _api = _make_api(_config)
 
-    for status in tweepy.Cursor(_api.user_timeline, since_id=_config.get('last_id'), include_rts=False, exclude_replies=True).items():       
+    for status in tweepy.Cursor(_api.user_timeline, since_id=_config.get('last_id'), include_rts=False, exclude_replies=True).items():
         if status.created_at < datetime.utcnow() - timedelta(hours=_config.get('expiry_in_hours', 4)) and status.favorite_count == 0 and status.retweet_count == 0:
-            typer.echo(f'Bye bye!! No love for: {status.text}')
+            typer.echo(f'Deleting tweet, due to lack of engagement: {status.id_str} {status.text}')
             status.destroy()
-        
-        _config['last_id'] = status.id_str
+
+            _config['last_id'] = status.id_str
 
     with open(config, 'w') as f:
         f.write(json.dumps(_config))
         f.truncate()
+
 
 if __name__ == "__main__":
     typer.run(main)
